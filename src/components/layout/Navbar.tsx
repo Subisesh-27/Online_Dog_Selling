@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Sparkles, Heart, BarChart2, Sun, Moon, Bell, ShieldCheck,
-  LogOut, Menu, X, Lock, ChevronDown, MapPin, Phone,
-  MessageSquareText, User, CheckCircle2, Search,
+  LogOut, Menu, X, Lock, Phone,
+  MessageSquareText, User, Search,
   Home, Trophy, ShoppingBag, Tag
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -69,7 +69,7 @@ export const Navbar: React.FC = () => {
 
   const [showNotif, setShowNotif] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [showLocDrop, setShowLocDrop] = useState(false);
+  const [_showLocDrop, setShowLocDrop] = useState(false);
   const [selLoc, setSelLoc] = useState('Chennai, TN');
   const [scrolled, setScrolled] = useState(false);
   const [searchVal, setSearchVal] = useState('');
@@ -260,7 +260,7 @@ export const Navbar: React.FC = () => {
             </button>
 
             {/* Location selector – desktop only */}
-            <div className="relative hidden lg:block mt-1.5" ref={locRef}>
+            {/* <div className="relative hidden lg:block mt-1.5" ref={locRef}>
               <button
                 type="button"
                 onClick={() => setShowLocDrop(!showLocDrop)}
@@ -308,7 +308,7 @@ export const Navbar: React.FC = () => {
                   </div>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/* ── CENTER: Tamil Kennel Heritage Frame ── */}
@@ -516,7 +516,7 @@ export const Navbar: React.FC = () => {
               </button>
 
               {/* Notifications */}
-              <div className="relative" ref={notifRef}>
+              {/* <div className="relative" ref={notifRef}>
                 <button
                   type="button"
                   onClick={() => setShowNotif(!showNotif)}
@@ -576,7 +576,7 @@ export const Navbar: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </div>
+              </div> */}
 
               {/* AI Chat */}
               <button

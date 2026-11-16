@@ -124,10 +124,13 @@ interface AppContextType {
   dogs: Dog[];
   setDogs: React.Dispatch<React.SetStateAction<Dog[]>>;
   addDogListing: (newDog: Dog) => Promise<void>;
+  updateDogListing: (id: string, updatedDog: Dog) => Promise<boolean>;
   refreshDogs: () => Promise<void>;
   
   selectedDog: Dog | null;
   setSelectedDog: (d: Dog | null) => void;
+  editingAdminDog: Dog | null;
+  setEditingAdminDog: (d: Dog | null) => void;
 
   // Dog Foods & Dog Accessories (Admin Managed Exclusively)
   products: DogProduct[];
@@ -220,6 +223,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return INITIAL_DOGS;
   });
   const [selectedDog, setSelectedDog] = useState<Dog | null>(null);
+  const [editingAdminDog, setEditingAdminDog] = useState<Dog | null>(null);
 
   // Auth User State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -1013,6 +1017,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateDogListing = async (id: string, updatedDog: Dog): Promise<boolean> => {
+    try {
+      // 1. Try sending to backend API if reachable
+      try {
+        const payload = {
+          name: updatedDog.name,
+          breed: updatedDog.breed,
+          category: updatedDog.category,
+          age: updatedDog.age,
+          ageMonths: updatedDog.ageMonths,
+          gender: updatedDog.gender,
+          price: updatedDog.price,
+          originalPrice: updatedDog.originalPrice,
+          location: updatedDog.location,
+          color: updatedDog.color,
+          weightKg: updatedDog.weightKg,
+          images: updatedDog.images,
+          frames360: updatedDog.frames360,
+          description: updatedDog.description,
+          certified: updatedDog.certified,
+          availability: updatedDog.availableNow !== false,
+          vaccinationStatus: updatedDog.health?.vaccinationStatus,
+          microchipNumber: updatedDog.health?.microchipId,
+          healthCertificate: updatedDog.health?.microchipId,
+          sellerInfo: {
+            name: updatedDog.seller?.name,
+            businessName: updatedDog.seller?.businessName,
+            avatar: updatedDog.seller?.avatar,
+            rating: updatedDog.seller?.rating,
+            reviewsCount: updatedDog.seller?.reviewsCount,
+            city: updatedDog.seller?.city,
+            phone: updatedDog.seller?.phone,
+          }
+        };
+        await api.updateDogListing(id, payload);
+      } catch (backendErr) {
+        console.warn('[ AppContext ] Backend updateDogListing unreachable/offline:', backendErr);
+      }
+
+      // 2. Update React state
+      setDogs(prev => {
+        const updated = prev.map(d => (d.id === id || (d as any)._id === id ? { ...d, ...updatedDog } : d));
+        try {
+          const existingCustom: Dog[] = JSON.parse(localStorage.getItem('pawverse_custom_dogs') || '[]');
+          const idx = existingCustom.findIndex(d => d.id === id || (d as any)._id === id);
+          if (idx !== -1) {
+            existingCustom[idx] = { ...existingCustom[idx], ...updatedDog };
+          } else {
+            existingCustom.unshift(updatedDog);
+          }
+          localStorage.setItem('pawverse_custom_dogs', JSON.stringify(existingCustom));
+        } catch (e) {
+          console.warn('Could not save updated dog to localStorage:', e);
+        }
+        return updated;
+      });
+
+      // 3. Update selectedDog if currently open in DogDetailsModal
+      setSelectedDog(curr => (curr && (curr.id === id || (curr as any)._id === id) ? { ...curr, ...updatedDog } : curr));
+
+      addNotification(`Dog & Breeder Profile for "${updatedDog.name}" updated successfully! 🐾`);
+      return true;
+    } catch (err: any) {
+      console.error('Failed to update dog listing:', err);
+      return false;
+    }
+  };
+
   // Dog Show Helpers
   const createDogShow = async (showPayload: any): Promise<boolean> => {
     try {
@@ -1492,9 +1564,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dogs,
       setDogs,
       addDogListing,
+      updateDogListing,
       refreshDogs,
       selectedDog,
       setSelectedDog,
+      editingAdminDog,
+      setEditingAdminDog,
       products,
       setProducts,
       addProduct,

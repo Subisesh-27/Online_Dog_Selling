@@ -28,7 +28,12 @@ import {
   Upload,
   Edit2,
   AlertCircle,
-  Filter
+  Filter,
+  Star,
+  Phone,
+  Award,
+  Check,
+  Edit3
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../lib/api';
@@ -63,7 +68,10 @@ export const AdminDashboard: React.FC = () => {
     updateProduct,
     deleteProduct,
     refreshProducts,
-    addNotification
+    addNotification,
+    updateDogListing,
+    editingAdminDog,
+    setEditingAdminDog
   } = useApp();
 
   const [activeAdminTab, setActiveAdminTab] = useState<'seller_dogs' | 'dog_foods' | 'dog_accessories' | 'sellers' | 'listings' | 'users' | 'orders' | 'shows' | 'analytics'>('seller_dogs');
@@ -146,6 +154,220 @@ export const AdminDashboard: React.FC = () => {
     setFormImageFile(null);
     setFormImagePreview('');
     setFormImageUrl('');
+  };
+
+  // Edit Dog & Certified Breeder Management State
+  const [editingDog, setEditingDog] = useState<any | null>(null);
+  const [editDogName, setEditDogName] = useState('');
+  const [editDogBreed, setEditDogBreed] = useState('');
+  const [editDogCategory, setEditDogCategory] = useState<any>('Family Dogs');
+  const [editDogAge, setEditDogAge] = useState('');
+  const [editDogGender, setEditDogGender] = useState<'Male' | 'Female'>('Male');
+  const [editDogPrice, setEditDogPrice] = useState('');
+  const [editDogOriginalPrice, setEditDogOriginalPrice] = useState('');
+  const [editDogLocation, setEditDogLocation] = useState('');
+  const [editDogColor, setEditDogColor] = useState('Standard');
+  const [editDogWeight, setEditDogWeight] = useState('6');
+  const [editDogDescription, setEditDogDescription] = useState('');
+  const [editDogAvailability, setEditDogAvailability] = useState(true);
+
+  // Dog Photo State
+  const [editDogImageFile, setEditDogImageFile] = useState<File | null>(null);
+  const [editDogImagePreview, setEditDogImagePreview] = useState<string>('');
+  const [editDogImageUrl, setEditDogImageUrl] = useState<string>('');
+  const [editDogImageMode, setEditDogImageMode] = useState<'file' | 'url'>('url');
+
+  // Health & Certificate State
+  const [editDogCertified, setEditDogCertified] = useState(true); // KCI Audited / Certified
+  const [editDogVaccination, setEditDogVaccination] = useState<string>('Fully Vaccinated');
+  const [editDogMicrochipId, setEditDogMicrochipId] = useState('');
+  const [editDogDnaVerified, setEditDogDnaVerified] = useState(true);
+  const [editDogHealthScore, setEditDogHealthScore] = useState('98');
+  const [editDogDewormed, setEditDogDewormed] = useState(true);
+  const [editDogVetInspectionDate, setEditDogVetInspectionDate] = useState('2026-08-01');
+
+  // Certified Breeder Profile State (Shown in image)
+  const [editBreederBusinessName, setEditBreederBusinessName] = useState('');
+  const [editBreederContactName, setEditBreederContactName] = useState('');
+  const [editBreederPhone, setEditBreederPhone] = useState('');
+  const [editBreederEmail, setEditBreederEmail] = useState('');
+  const [editBreederCity, setEditBreederCity] = useState('');
+  const [editBreederAvatarFile, setEditBreederAvatarFile] = useState<File | null>(null);
+  const [editBreederAvatarPreview, setEditBreederAvatarPreview] = useState<string>('');
+  const [editBreederAvatarUrl, setEditBreederAvatarUrl] = useState<string>('');
+  const [editBreederAvatarMode, setEditBreederAvatarMode] = useState<'file' | 'url'>('url');
+  const [editBreederRating, setEditBreederRating] = useState('4.95');
+  const [editBreederReviewsCount, setEditBreederReviewsCount] = useState('140');
+  const [editBreederVerified, setEditBreederVerified] = useState(true); // Direct Breeder Verified
+
+  const [editDogModalTab, setEditDogModalTab] = useState<'breeder' | 'companion' | 'certificate'>('breeder');
+  const [editDogSubmitting, setEditDogSubmitting] = useState(false);
+  const [editDogError, setEditDogError] = useState('');
+
+  const handleStartEditDog = (dog: any) => {
+    setEditingDog(dog);
+    setEditDogError('');
+    setEditDogModalTab('breeder');
+
+    setEditDogName(dog.name || '');
+    setEditDogBreed(dog.breed || '');
+    setEditDogCategory(dog.category || 'Family Dogs');
+    setEditDogAge(dog.age || '');
+    setEditDogGender(dog.gender || 'Male');
+    setEditDogPrice(String(dog.price || ''));
+    setEditDogOriginalPrice(String(dog.originalPrice || Math.round((dog.price || 0) * 1.15)));
+    setEditDogLocation(dog.location || '');
+    setEditDogColor(dog.color || 'Standard');
+    setEditDogWeight(String(dog.weightKg || '6'));
+    setEditDogDescription(dog.description || '');
+    setEditDogAvailability(dog.availability !== false && dog.availableNow !== false);
+
+    const existingImg = dog.images?.[0] || '';
+    setEditDogImagePreview(existingImg);
+    setEditDogImageUrl(existingImg);
+    setEditDogImageFile(null);
+    setEditDogImageMode(existingImg.startsWith('data:') ? 'file' : 'url');
+
+    setEditDogCertified(dog.certified !== undefined ? dog.certified : true);
+    setEditDogVaccination(dog.health?.vaccinationStatus || 'Fully Vaccinated');
+    setEditDogMicrochipId(dog.health?.microchipId || `KCI-TN-${Math.floor(1000 + Math.random() * 9000)}`);
+    setEditDogDnaVerified(dog.health?.dnaVerified !== undefined ? dog.health.dnaVerified : true);
+    setEditDogHealthScore(String(dog.health?.healthScore || 98));
+    setEditDogDewormed(dog.health?.deWormed !== undefined ? dog.health.deWormed : true);
+    setEditDogVetInspectionDate(dog.health?.vetInspectionDate || new Date().toISOString().split('T')[0]);
+
+    setEditBreederBusinessName(dog.seller?.businessName || dog.sellerInfo?.businessName || 'Madurai Heritage Hound Haven');
+    setEditBreederContactName(dog.seller?.name || dog.sellerInfo?.name || dog.sellerName || 'M. Palanivel');
+    setEditBreederPhone(dog.seller?.phone || dog.sellerInfo?.phone || dog.sellerPhone || '+91 94432 12345');
+    setEditBreederEmail(dog.sellerInfo?.email || dog.sellerEmail || `${(dog.seller?.name || 'breeder').toLowerCase().replace(/\s+/g, '')}@kennels.com`);
+    setEditBreederCity(dog.seller?.city || dog.sellerInfo?.city || dog.location || 'Madurai');
+
+    const existingAvatar = dog.seller?.avatar || dog.sellerInfo?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80';
+    setEditBreederAvatarPreview(existingAvatar);
+    setEditBreederAvatarUrl(existingAvatar);
+    setEditBreederAvatarFile(null);
+    setEditBreederAvatarMode(existingAvatar.startsWith('data:') ? 'file' : 'url');
+
+    setEditBreederRating(String(dog.seller?.rating || 4.95));
+    setEditBreederReviewsCount(String(dog.seller?.reviewsCount || 140));
+    setEditBreederVerified(dog.seller?.verifiedBreeder !== undefined ? dog.seller.verifiedBreeder : true);
+  };
+
+  useEffect(() => {
+    if (editingAdminDog) {
+      setActiveAdminTab('seller_dogs');
+      handleStartEditDog(editingAdminDog);
+      setEditingAdminDog(null);
+    }
+  }, [editingAdminDog]);
+
+  const handleEditDogImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditDogImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setEditDogImagePreview(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditBreederAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditBreederAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setEditBreederAvatarPreview(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveEditDog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDog) return;
+    setEditDogError('');
+
+    if (!editDogName || !editDogBreed || !editDogPrice || !editDogLocation || !editBreederContactName || !editBreederPhone) {
+      setEditDogError('Please fill in all mandatory dog and breeder fields.');
+      return;
+    }
+
+    const numPrice = Number(editDogPrice);
+    if (isNaN(numPrice) || numPrice <= 0) {
+      setEditDogError('Price must be a valid positive number.');
+      return;
+    }
+
+    try {
+      setEditDogSubmitting(true);
+      const chosenDogImg = editDogImagePreview || editDogImageUrl || editingDog.images?.[0] || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=1200&q=80';
+      const chosenAvatar = editBreederAvatarPreview || editBreederAvatarUrl || editingDog.seller?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80';
+
+      const dogId = editingDog.id || editingDog._id;
+      const updatedDog: any = {
+        ...editingDog,
+        name: editDogName,
+        breed: editDogBreed,
+        category: editDogCategory,
+        age: editDogAge,
+        gender: editDogGender,
+        price: numPrice,
+        originalPrice: editDogOriginalPrice ? Number(editDogOriginalPrice) : Math.round(numPrice * 1.15),
+        location: editDogLocation,
+        color: editDogColor,
+        weightKg: Number(editDogWeight) || editingDog.weightKg || 6,
+        description: editDogDescription,
+        availability: editDogAvailability,
+        availableNow: editDogAvailability,
+        certified: editDogCertified,
+        images: [chosenDogImg, ...(editingDog.images?.slice(1) || [])],
+        frames360: [chosenDogImg, ...(editingDog.frames360?.slice(1) || [])],
+        health: {
+          ...editingDog.health,
+          vaccinationStatus: editDogVaccination,
+          microchipId: editDogMicrochipId,
+          dnaVerified: editDogDnaVerified,
+          healthScore: Number(editDogHealthScore) || 98,
+          deWormed: editDogDewormed,
+          vetInspectionDate: editDogVetInspectionDate,
+        },
+        seller: {
+          ...editingDog.seller,
+          id: editingDog.seller?.id || 's-admin',
+          name: editBreederContactName,
+          businessName: editBreederBusinessName,
+          avatar: chosenAvatar,
+          rating: Number(editBreederRating) || 4.95,
+          reviewsCount: Number(editBreederReviewsCount) || 140,
+          verifiedBreeder: editBreederVerified,
+          city: editBreederCity,
+          state: editingDog.seller?.state || 'Tamil Nadu',
+          phone: editBreederPhone,
+          responseRate: editingDog.seller?.responseRate || '98% (< 20 mins)',
+          joinedYear: editingDog.seller?.joinedYear || 2024,
+        },
+        sellerInfo: {
+          name: editBreederContactName,
+          businessName: editBreederBusinessName,
+          avatar: chosenAvatar,
+          phone: editBreederPhone,
+          email: editBreederEmail,
+          city: editBreederCity,
+          rating: Number(editBreederRating) || 4.95,
+          reviewsCount: Number(editBreederReviewsCount) || 140,
+        }
+      };
+
+      await updateDogListing(dogId, updatedDog);
+      setEditingDog(null);
+    } catch (err: any) {
+      setEditDogError(err.message || 'Failed to update dog listing.');
+    } finally {
+      setEditDogSubmitting(false);
+    }
   };
 
   // Inline Admin Login Form State
@@ -1317,14 +1539,24 @@ export const AdminDashboard: React.FC = () => {
                             </span>
                           </td>
                           <td className="p-3.5 text-right">
-                            <button
-                              onClick={() => setRemovingDog(dog)}
-                              className="btn-danger text-xs py-1.5 px-3"
-                              title="Remove dog"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Remove</span>
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleStartEditDog(dog)}
+                                className="px-2.5 py-1.5 rounded-xl border border-[#EAB308] bg-[#FEF08A] hover:bg-[#FACC15] text-[#713F12] font-bold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+                                title="Edit Dog Details, Photo, Certificate & Breeder Profile"
+                              >
+                                <Edit3 className="w-3.5 h-3.5 text-[#A16207]" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                onClick={() => setRemovingDog(dog)}
+                                className="btn-danger text-xs py-1.5 px-3"
+                                title="Remove dog"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Remove</span>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1367,13 +1599,23 @@ export const AdminDashboard: React.FC = () => {
                           </span>
                         </div>
 
-                        <button
-                          onClick={() => setRemovingDog(dog)}
-                          className="btn-danger text-xs py-1.5 px-3"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Remove</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleStartEditDog(dog)}
+                            className="px-2.5 py-1.5 rounded-xl border border-[#EAB308] bg-[#FEF08A] hover:bg-[#FACC15] text-[#713F12] font-bold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+                            title="Edit Dog"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-[#A16207]" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => setRemovingDog(dog)}
+                            className="btn-danger text-xs py-1.5 px-3"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Remove</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -2951,8 +3193,640 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 2: REMOVE DOG CONFIRMATION MODAL */}
+      {/* MODAL 1.5: EDIT DOG & CERTIFIED BREEDER PROFILE MODAL */}
       {/* ========================================================================= */}
+      {editingDog && (
+        <div className="fixed inset-0 z-50 bg-[#0A0A0A]/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#FEF9C3] dark:bg-[#FEF9C3] border border-[#FDE047] rounded-3xl p-6 sm:p-8 max-w-3xl w-full space-y-6 my-8 shadow-2xl animate-in zoom-in-95 max-h-[92vh] flex flex-col">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#FDE047] pb-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FEF08A] text-[#713F12] border border-[#FDE047] text-[10px] font-bold uppercase mb-1">
+                  <ShieldCheck className="w-3 h-3 text-[#CA8A04]" /> Admin Management Studio
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-[#0A0A0A] font-heading">
+                  Edit Dog & Certified Breeder Details
+                </h3>
+                <p className="text-xs text-[#713F12]">
+                  Update companion photo, price, KCI certificate, and the Certified Breeder Profile card.
+                </p>
+              </div>
+              <button 
+                onClick={() => setEditingDog(null)} 
+                className="text-[#713F12] hover:text-[#0A0A0A] p-2 rounded-xl hover:bg-[#FEF08A] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Tabs */}
+            <div className="flex items-center gap-2 border-b border-[#FDE047] pb-2">
+              <button
+                type="button"
+                onClick={() => setEditDogModalTab('breeder')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  editDogModalTab === 'breeder'
+                    ? 'bg-[#0A0A0A] text-white shadow-xs'
+                    : 'bg-[#FEF08A]/70 text-[#713F12] hover:bg-[#FEF08A]'
+                }`}
+              >
+                <Award className="w-3.5 h-3.5 text-[#EAB308]" />
+                <span>Certified Breeder Profile</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEditDogModalTab('companion')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  editDogModalTab === 'companion'
+                    ? 'bg-[#0A0A0A] text-white shadow-xs'
+                    : 'bg-[#FEF08A]/70 text-[#713F12] hover:bg-[#FEF08A]'
+                }`}
+              >
+                <DogIcon className="w-3.5 h-3.5 text-[#EAB308]" />
+                <span>Dog Info & Photo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEditDogModalTab('certificate')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  editDogModalTab === 'certificate'
+                    ? 'bg-[#0A0A0A] text-white shadow-xs'
+                    : 'bg-[#FEF08A]/70 text-[#713F12] hover:bg-[#FEF08A]'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[#EAB308]" />
+                <span>Certificates & Health</span>
+              </button>
+            </div>
+
+            {editDogError && (
+              <div className="p-3 rounded-xl bg-[#D64545]/10 border border-[#D64545]/30 text-[#D64545] text-xs font-semibold">
+                {editDogError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEditDog} className="space-y-5 overflow-y-auto pr-1 flex-1 text-xs">
+              
+              {/* TAB 1: CERTIFIED BREEDER PROFILE */}
+              {editDogModalTab === 'breeder' && (
+                <div className="space-y-5 animate-in fade-in">
+                  
+                  {/* Live Card Preview Box (Matching user's exact uploaded screenshot) */}
+                  <div className="p-4 rounded-2xl bg-white border border-[#FDE047] shadow-sm space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-[#713F12] pb-1 border-b border-[#FEF08A]">
+                      <span className="flex items-center gap-1">
+                        <Eye className="w-3.5 h-3.5 text-[#CA8A04]" /> Live Card Preview (Shown in Dog Details Modal)
+                      </span>
+                      <span className="text-[10px] text-[#A16207]">Instant Real-Time Preview</span>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-[#E4E4E7] shadow-xs space-y-3">
+                      <div className="flex items-center justify-between border-b border-[#E4E4E7] pb-2.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] flex items-center gap-1.5">
+                          <Award className="w-3.5 h-3.5 text-[#EAB308]" /> Certified Breeder Profile
+                        </span>
+                        <span className="text-[10px] bg-[#FEF08A] text-[#713F12] font-bold px-2.5 py-0.5 rounded-full border border-[#FDE047]">
+                          {editDogCertified ? 'KCI Audited' : 'Verified Breeder'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={editBreederAvatarPreview || editBreederAvatarUrl || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80'}
+                          alt={editBreederContactName || 'Breeder'}
+                          className="w-13 h-13 rounded-xl object-cover border border-[#E4E4E7] shadow-2xs"
+                        />
+                        <div className="space-y-0.5">
+                          <h4 className="font-bold text-[#0A0A0A] text-sm sm:text-base">
+                            {editBreederBusinessName || 'Madurai Heritage Hound Haven'}
+                          </h4>
+                          <p className="text-xs text-[#71717A]">
+                            Contact: {editBreederContactName || 'M. Palanivel'} • {editBreederCity || 'Madurai'}
+                          </p>
+                          <div className="flex items-center gap-2 text-[11px] text-[#71717A]">
+                            <span className="flex items-center text-[#EAB308] font-bold">
+                              <Star className="w-3.5 h-3.5 fill-current" /> {editBreederRating || 4.95}
+                            </span>
+                            <span>({editBreederReviewsCount || 140} Verified Reviews)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-[#E4E4E7] flex items-center justify-between text-xs text-[#71717A]">
+                        <span className="flex items-center gap-1 font-medium">
+                          <Phone className="w-3.5 h-3.5 text-[#EAB308]" /> {editBreederPhone || '+91 94432 12345'}
+                        </span>
+                        <span className="font-bold text-[#0A0A0A]">
+                          {editBreederVerified ? 'Direct Breeder Verified' : 'Breeder Registered'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Breeder Avatar Upload / URL */}
+                  <div className="p-4 rounded-2xl bg-[#FEF08A]/40 border border-[#FDE047] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-[#0A0A0A]">Breeder Photo / Avatar</label>
+                      <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-[#FDE047] text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => setEditBreederAvatarMode('file')}
+                          className={`px-2 py-0.5 rounded font-bold ${editBreederAvatarMode === 'file' ? 'bg-[#0A0A0A] text-white' : 'text-[#713F12]'}`}
+                        >
+                          Upload File
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditBreederAvatarMode('url')}
+                          className={`px-2 py-0.5 rounded font-bold ${editBreederAvatarMode === 'url' ? 'bg-[#0A0A0A] text-white' : 'text-[#713F12]'}`}
+                        >
+                          Image URL
+                        </button>
+                      </div>
+                    </div>
+
+                    {editBreederAvatarMode === 'file' ? (
+                      <div className="flex items-center gap-3">
+                        <label className="btn-secondary py-2 px-3 text-xs cursor-pointer flex items-center gap-1.5 shrink-0">
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Choose Photo</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleEditBreederAvatarFileChange}
+                            className="hidden"
+                          />
+                        </label>
+                        <span className="text-[11px] text-[#713F12] truncate">
+                          {editBreederAvatarFile ? editBreederAvatarFile.name : 'Select JPG or PNG file'}
+                        </span>
+                      </div>
+                    ) : (
+                      <input
+                        type="url"
+                        placeholder="https://images.unsplash.com/photo-..."
+                        value={editBreederAvatarUrl}
+                        onChange={(e) => {
+                          setEditBreederAvatarUrl(e.target.value);
+                          setEditBreederAvatarPreview(e.target.value);
+                        }}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    )}
+                  </div>
+
+                  {/* Breeder Details Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">
+                        Breeder / Kennel Business Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Madurai Heritage Hound Haven"
+                        value={editBreederBusinessName}
+                        onChange={(e) => setEditBreederBusinessName(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">
+                        Contact Person Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. M. Palanivel"
+                        value={editBreederContactName}
+                        onChange={(e) => setEditBreederContactName(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">
+                        Breeder Phone Number *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. +91 94432 12345"
+                        value={editBreederPhone}
+                        onChange={(e) => setEditBreederPhone(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">
+                        Breeder Email
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="e.g. palanivel@kennels.com"
+                        value={editBreederEmail}
+                        onChange={(e) => setEditBreederEmail(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">
+                        City / Region
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Madurai"
+                        value={editBreederCity}
+                        onChange={(e) => setEditBreederCity(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[#0A0A0A] font-bold mb-1">
+                          Rating (1 - 5)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="1"
+                          max="5"
+                          value={editBreederRating}
+                          onChange={(e) => setEditBreederRating(e.target.value)}
+                          className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[#0A0A0A] font-bold mb-1">
+                          Reviews Count
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={editBreederReviewsCount}
+                          onChange={(e) => setEditBreederReviewsCount(e.target.value)}
+                          className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="editBreederVerifiedCheckbox"
+                      checked={editBreederVerified}
+                      onChange={(e) => setEditBreederVerified(e.target.checked)}
+                      className="w-4 h-4 accent-[#EAB308] rounded cursor-pointer"
+                    />
+                    <label htmlFor="editBreederVerifiedCheckbox" className="font-bold text-[#0A0A0A] cursor-pointer">
+                      Direct Breeder Verified Badge (Shows "Direct Breeder Verified" on listing)
+                    </label>
+                  </div>
+
+                </div>
+              )}
+
+              {/* TAB 2: COMPANION DETAILS & PHOTO */}
+              {editDogModalTab === 'companion' && (
+                <div className="space-y-4 animate-in fade-in">
+                  
+                  {/* Dog Image Section */}
+                  <div className="p-4 rounded-2xl bg-[#FEF08A]/40 border border-[#FDE047] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-[#0A0A0A]">Dog Main Photo *</label>
+                      <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-[#FDE047] text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => setEditDogImageMode('file')}
+                          className={`px-2 py-0.5 rounded font-bold ${editDogImageMode === 'file' ? 'bg-[#0A0A0A] text-white' : 'text-[#713F12]'}`}
+                        >
+                          Upload File
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditDogImageMode('url')}
+                          className={`px-2 py-0.5 rounded font-bold ${editDogImageMode === 'url' ? 'bg-[#0A0A0A] text-white' : 'text-[#713F12]'}`}
+                        >
+                          Image URL
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      {editDogImagePreview ? (
+                        <img
+                          src={editDogImagePreview}
+                          alt="Dog preview"
+                          className="w-20 h-20 rounded-xl object-cover border border-[#FDE047] shadow-sm shrink-0"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-xl bg-white border border-[#FDE047] flex items-center justify-center text-[#CA8A04] shrink-0">
+                          <DogIcon className="w-8 h-8" />
+                        </div>
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        {editDogImageMode === 'file' ? (
+                          <div className="flex items-center gap-3">
+                            <label className="btn-secondary py-2 px-3 text-xs cursor-pointer inline-flex items-center gap-1.5 shrink-0">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Select Dog Image</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleEditDogImageFileChange}
+                                className="hidden"
+                              />
+                            </label>
+                            <span className="text-[11px] text-[#713F12] truncate">
+                              {editDogImageFile ? editDogImageFile.name : 'Select JPG or PNG file'}
+                            </span>
+                          </div>
+                        ) : (
+                          <input
+                            type="url"
+                            placeholder="https://images.unsplash.com/photo-..."
+                            value={editDogImageUrl}
+                            onChange={(e) => {
+                              setEditDogImageUrl(e.target.value);
+                              setEditDogImagePreview(e.target.value);
+                            }}
+                            className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                          />
+                        )}
+                        <p className="text-[10px] text-[#713F12] mt-1">High-resolution portrait photo for marketplace & 360 viewer.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Dog Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editDogName}
+                        onChange={(e) => setEditDogName(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Breed *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editDogBreed}
+                        onChange={(e) => setEditDogBreed(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Category</label>
+                      <select
+                        value={editDogCategory}
+                        onChange={(e) => setEditDogCategory(e.target.value as any)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      >
+                        <option value="Family Dogs">Family Dogs</option>
+                        <option value="Puppies">Puppies</option>
+                        <option value="Guard Dogs">Guard Dogs</option>
+                        <option value="Rare Breeds">Rare Breeds</option>
+                        <option value="Small Dogs">Small Dogs</option>
+                        <option value="Large Dogs">Large Dogs</option>
+                        <option value="Show Dogs">Show Dogs</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Age</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 10 Weeks"
+                        value={editDogAge}
+                        onChange={(e) => setEditDogAge(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Gender</label>
+                      <select
+                        value={editDogGender}
+                        onChange={(e) => setEditDogGender(e.target.value as any)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Adoption Price (₹) *</label>
+                      <input
+                        type="number"
+                        required
+                        value={editDogPrice}
+                        onChange={(e) => setEditDogPrice(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Original Price (₹)</label>
+                      <input
+                        type="number"
+                        value={editDogOriginalPrice}
+                        onChange={(e) => setEditDogOriginalPrice(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">City / Location *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editDogLocation}
+                        onChange={(e) => setEditDogLocation(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Color & Coat</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Silver Grey & Fawn"
+                        value={editDogColor}
+                        onChange={(e) => setEditDogColor(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[#0A0A0A] font-bold mb-1">Description (About Companion)</label>
+                    <textarea
+                      rows={2}
+                      value={editDogDescription}
+                      onChange={(e) => setEditDogDescription(e.target.value)}
+                      className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[#0A0A0A] font-bold mb-1">Availability Status</label>
+                    <select
+                      value={editDogAvailability ? 'true' : 'false'}
+                      onChange={(e) => setEditDogAvailability(e.target.value === 'true')}
+                      className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                    >
+                      <option value="true">Available (Active in Marketplace)</option>
+                      <option value="false">Reserved / Sold</option>
+                    </select>
+                  </div>
+
+                </div>
+              )}
+
+              {/* TAB 3: CERTIFICATES & HEALTH */}
+              {editDogModalTab === 'certificate' && (
+                <div className="space-y-4 animate-in fade-in">
+                  
+                  {/* Certified & KCI Audited Badge */}
+                  <div className="p-4 rounded-2xl bg-[#FEF08A]/50 border border-[#FDE047] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-[#0A0A0A] flex items-center gap-1.5">
+                          <Award className="w-4 h-4 text-[#CA8A04]" /> KCI Audited Certification
+                        </span>
+                        <p className="text-[11px] text-[#713F12]">
+                          Displays the official "KCI Audited" gold badge on the certified breeder card and listing details.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        id="editDogCertifiedCheck"
+                        checked={editDogCertified}
+                        onChange={(e) => setEditDogCertified(e.target.checked)}
+                        className="w-5 h-5 accent-[#EAB308] rounded cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Vaccination Status</label>
+                      <select
+                        value={editDogVaccination}
+                        onChange={(e) => setEditDogVaccination(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      >
+                        <option value="Fully Vaccinated">Fully Vaccinated</option>
+                        <option value="Partially Vaccinated">Partially Vaccinated</option>
+                        <option value="Pending">Pending</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Microchip Number / ID</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. KCI-TN-9812001"
+                        value={editDogMicrochipId}
+                        onChange={(e) => setEditDogMicrochipId(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Health Score (0 - 100)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={editDogHealthScore}
+                        onChange={(e) => setEditDogHealthScore(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#0A0A0A] font-bold mb-1">Vet Inspection Date</label>
+                      <input
+                        type="date"
+                        value={editDogVetInspectionDate}
+                        onChange={(e) => setEditDogVetInspectionDate(e.target.value)}
+                        className="w-full bg-white border border-[#FDE047] rounded-xl p-2.5 text-[#0A0A0A] focus:outline-none focus:border-[#EAB308] focus:ring-1 focus:ring-[#EAB308]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div className="flex items-center gap-2 p-3 bg-white rounded-xl border border-[#FDE047]">
+                      <input
+                        type="checkbox"
+                        id="dnaCheck"
+                        checked={editDogDnaVerified}
+                        onChange={(e) => setEditDogDnaVerified(e.target.checked)}
+                        className="w-4 h-4 accent-[#EAB308] rounded cursor-pointer"
+                      />
+                      <label htmlFor="dnaCheck" className="font-bold text-[#0A0A0A] cursor-pointer">
+                        DNA Verified Pedigree (Shows "Verified ✓")
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-2 p-3 bg-white rounded-xl border border-[#FDE047]">
+                      <input
+                        type="checkbox"
+                        id="dewormCheck"
+                        checked={editDogDewormed}
+                        onChange={(e) => setEditDogDewormed(e.target.checked)}
+                        className="w-4 h-4 accent-[#EAB308] rounded cursor-pointer"
+                      />
+                      <label htmlFor="dewormCheck" className="font-bold text-[#0A0A0A] cursor-pointer">
+                        Dewormed & Parasite Checked
+                      </label>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* Form Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#FDE047]">
+                <button
+                  type="button"
+                  onClick={() => setEditingDog(null)}
+                  className="btn-secondary text-xs py-2.5 px-5"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editDogSubmitting}
+                  className="btn-primary text-xs py-2.5 px-6 flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{editDogSubmitting ? 'Updating...' : 'Save & Update Dog Listing'}</span>
+                </button>
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+      )}
       {removingDog && (
         <div className="fixed inset-0 z-50 bg-[#0A0A0A]/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#FEF9C3] dark:bg-[#FEF9C3] border border-[#FDE047] rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-5 text-center shadow-2xl animate-in zoom-in-95">

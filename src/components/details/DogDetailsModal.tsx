@@ -11,7 +11,8 @@ import {
   Phone,
   MapPin,
   Award,
-  ShoppingBag
+  ShoppingBag,
+  Edit3
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Viewer360 } from '../common/360Viewer';
@@ -26,7 +27,10 @@ export const DogDetailsModal: React.FC = () => {
     toggleCompare,
     startCheckout,
     startVideoCall,
-    dogs
+    dogs,
+    currentUser,
+    setActiveTab,
+    setEditingAdminDog
   } = useApp();
 
   const [activeMedia, setActiveMedia] = useState<'photos' | '360' | 'video'>('photos');
@@ -84,6 +88,21 @@ export const DogDetailsModal: React.FC = () => {
             >
               <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
             </button>
+
+            {(currentUser?.role === 'admin' || currentUser?.role === 'super_admin') && (
+              <button
+                onClick={() => {
+                  setEditingAdminDog(selectedDog);
+                  setSelectedDog(null);
+                  setActiveTab('admin');
+                }}
+                className="px-3 py-2 rounded-xl bg-[#FEF08A] hover:bg-[#FACC15] text-[#713F12] text-xs font-bold border border-[#FDE047] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                title="Edit Dog Details, Photo, Certificate & Breeder Profile"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-[#A16207]" />
+                <span className="hidden sm:inline">Edit as Admin</span>
+              </button>
+            )}
 
             <button
               onClick={() => setSelectedDog(null)}
@@ -281,9 +300,24 @@ export const DogDetailsModal: React.FC = () => {
                   <span className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] dark:text-white flex items-center gap-1.5">
                     <Award className="w-3.5 h-3.5 text-[#EAB308]" /> Certified Breeder Profile
                   </span>
-                  <span className="text-[10px] bg-[#FEF08A] dark:bg-[#FACC15]/15 text-[#713F12] dark:text-[#FACC15] font-bold px-2 py-0.5 rounded-full border border-[#FDE047] dark:border-[#FACC15]/25">
-                    KCI Audited
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] bg-[#FEF08A] dark:bg-[#FACC15]/15 text-[#713F12] dark:text-[#FACC15] font-bold px-2 py-0.5 rounded-full border border-[#FDE047] dark:border-[#FACC15]/25">
+                      {selectedDog.certified !== false ? 'KCI Audited' : 'Verified Breeder'}
+                    </span>
+                    {(currentUser?.role === 'admin' || currentUser?.role === 'super_admin') && (
+                      <button
+                        onClick={() => {
+                          setEditingAdminDog(selectedDog);
+                          setSelectedDog(null);
+                          setActiveTab('admin');
+                        }}
+                        className="text-[10px] text-[#713F12] bg-[#FEF08A] hover:bg-[#FACC15] border border-[#FDE047] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Edit Breeder Profile as Admin"
+                      >
+                        <Edit3 className="w-2.5 h-2.5 text-[#A16207]" /> Edit Profile
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-3">
