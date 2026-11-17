@@ -317,10 +317,11 @@ export const api = {
     return handleResponse(res);
   },
 
-  approveOrderPayment: async (orderId: string) => {
+  approveOrderPayment: async (orderId: string, details?: { buyerEmail?: string; dogName?: string }) => {
     const res = await fetch(`${API_BASE_URL}/admin/orders/${orderId}/approve-payment`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify(details || {}),
     });
     return handleResponse(res);
   },

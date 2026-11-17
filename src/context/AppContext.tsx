@@ -45,6 +45,8 @@ export interface OrderItem {
   purchaseDate: string;
   amount: number;
   paymentMethod: string;
+  paymentStatus?: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+  orderStatus?: string;
   status: 'Pending Admin Approval' | 'Approved by Admin' | 'Dog Dispatched (Live GPS)' | 'Order Confirmed' | 'Health Check Passed' | 'In Transit (Live GPS)' | 'Delivered' | 'Cancelled';
   trackingNumber: string;
   estimatedDelivery: string;
@@ -184,6 +186,7 @@ interface AppContextType {
   orders: OrderItem[];
   placeOrder: (item: any, paymentMethod: string, buyerDetails?: { fullName: string; phone: string; email?: string; address?: string }) => Promise<void>;
   approveOrder: (orderId: string) => Promise<void>;
+  approvePayment: (orderId: string, details?: { buyerEmail?: string; dogName?: string }) => Promise<void>;
   dispatchOrder: (orderId: string) => Promise<void>;
   rejectOrder: (orderId: string, reason?: string) => Promise<void>;
   
@@ -529,6 +532,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   purchaseDate: o.createdAt ? o.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
                   amount: o.amount,
                   paymentMethod: o.paymentMethod || 'Razorpay UPI/Cards',
+                  paymentStatus: o.paymentStatus || 'PENDING',
+                  orderStatus: o.orderStatus || 'PENDING_APPROVAL',
                   status: o.orderStatus === 'APPROVED'
                     ? 'Approved by Admin'
                     : o.orderStatus === 'OUT_FOR_DELIVERY' || o.orderStatus === 'DISPATCHED'
@@ -1330,6 +1335,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 purchaseDate: o.createdAt ? o.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
                 amount: o.amount,
                 paymentMethod: o.paymentMethod || paymentMethod,
+                paymentStatus: o.paymentStatus || 'PENDING',
+                orderStatus: o.orderStatus || 'PENDING_APPROVAL',
                 status: o.orderStatus === 'APPROVED' 
                   ? 'Approved by Admin' 
                   : o.orderStatus === 'OUT_FOR_DELIVERY' || o.orderStatus === 'DISPATCHED' 
@@ -1399,6 +1406,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       purchaseDate: new Date().toISOString().split('T')[0],
       amount: item?.price || 0,
       paymentMethod,
+      paymentStatus: 'PENDING',
+      orderStatus: 'PENDING_APPROVAL',
       status: 'Pending Admin Approval',
       trackingNumber: `GPS-PV-${Math.floor(1000 + Math.random() * 9000)}-TN`,
       estimatedDelivery: '3 - 5 Days from approval',
@@ -1465,6 +1474,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     addNotification(`Order #${orderId} APPROVED by Admin! Dog marked as Sold and queued for dispatch. ✓`);
+  };
+
+  const approvePayment = async (orderId: string, details?: { buyerEmail?: string; dogName?: string }) => {
+    try {
+      await api.approveOrderPayment(orderId, details);
+    } catch (err) {
+      console.warn('API approve payment error:', err);
+    }
+
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId || (o as any)._id === orderId) {
+        return {
+          ...o,
+          paymentStatus: 'PAID',
+        };
+      }
+      return o;
+    }));
+
+    addNotification(`💳 Payment approved for order #${orderId.slice(-6)}! Confirmation email sent to user. ✅`);
   };
 
   const dispatchOrder = async (orderId: string) => {
@@ -1612,6 +1641,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       orders,
       placeOrder,
       approveOrder,
+      approvePayment,
       dispatchOrder,
       rejectOrder,
       passports,

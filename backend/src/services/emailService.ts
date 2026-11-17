@@ -19,6 +19,10 @@ if (env.SMTP_USER && env.SMTP_PASSWORD) {
 
 export const sendEmail = async (to: string, subject: string, html: string): Promise<boolean> => {
   try {
+    if (!to) {
+      console.warn('[ Email Warning ] Recipient email is empty');
+      return false;
+    }
     if (transporter) {
       await transporter.sendMail({
         from: env.EMAIL_FROM,
@@ -100,9 +104,56 @@ export const sendOrderConfirmationEmail = async (email: string, customerName: st
       <div style="background: #1e293b; padding: 15px; border-radius: 8px; margin: 20px 0;">
         <p><strong>Order ID:</strong> ${orderId}</p>
         <p><strong>Total Paid:</strong> ₹${amount.toLocaleString('en-IN')}</p>
-        <p><strong>Status:</strong> Health Check Passed & In Transit</p>
+        <p><strong>Status:</strong> Health Check Passed &amp; In Transit</p>
       </div>
     </div>
   `;
   return sendEmail(email, subject, html);
+};
+
+// Send payment approval email to customer with admin contact details
+export const sendPaymentApprovalEmail = async (
+  to: string,
+  dogName: string,
+  adminContact: { phone: string; address: string; email: string }
+): Promise<boolean> => {
+  if (!to) {
+    console.warn('[ Email Service ] No destination email provided for payment approval notification.');
+    return false;
+  }
+  const subject = `PawVerse AI - Payment Successfully Registered & Approved for "${dogName}"! 💳✅`;
+  const html = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0f172a; color: #f8fafc; padding: 32px; border-radius: 16px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h1 style="color: #fbbf24; margin: 0; font-size: 26px; letter-spacing: 1px;">PawVerse AI 🐾</h1>
+        <p style="color: #94a3b8; font-size: 14px; margin-top: 4px;">Verified Canine Marketplace &amp; GPS Transit</p>
+      </div>
+
+      <div style="background: #1e293b; border-left: 4px solid #10b981; padding: 18px 20px; border-radius: 8px; margin-bottom: 24px;">
+        <h2 style="color: #10b981; margin: 0 0 8px 0; font-size: 18px;">Payment Successfully Registered &amp; Approved! 🎉</h2>
+        <p style="color: #e2e8f0; margin: 0; font-size: 14px; line-height: 1.5;">
+          Your payment for <strong>"${dogName}"</strong> has been reviewed and officially approved by PawVerse Admin.
+          Your puppy is now marked as reserved and is being prepped for dispatch with certified veterinary inspection and live GPS tracking.
+        </p>
+      </div>
+
+      <div style="background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 24px;">
+        <h3 style="color: #facc15; margin: 0 0 12px 0; font-size: 16px;">Have Any Questions? Contact PawVerse Admin:</h3>
+        <p style="color: #cbd5e1; font-size: 13px; line-height: 1.6; margin: 0 0 12px 0;">
+          If you have any questions regarding your order, dispatch timeline, vaccine certificates, or pet passport, please reach out to our admin team anytime:
+        </p>
+        <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px; color: #f8fafc; line-height: 2;">
+          <li>📞 <strong>Mobile Number:</strong> <a href="tel:${adminContact.phone}" style="color: #38bdf8; text-decoration: none;">${adminContact.phone}</a></li>
+          <li>📧 <strong>Admin Email:</strong> <a href="mailto:${adminContact.email}" style="color: #38bdf8; text-decoration: none;">${adminContact.email}</a></li>
+          <li>📍 <strong>Office Address:</strong> <span style="color: #e2e8f0;">${adminContact.address}</span></li>
+          <li>🕒 <strong>Support Hours:</strong> <span style="color: #94a3b8;">Mon - Sat, 9:00 AM - 8:00 PM IST</span></li>
+        </ul>
+      </div>
+
+      <div style="text-align: center; color: #64748b; font-size: 12px; margin-top: 24px;">
+        <p style="margin: 0;">Thank you for trusting PawVerse AI. Give your pet the loving home they deserve! 🐶❤️</p>
+      </div>
+    </div>
+  `;
+  return sendEmail(to, subject, html);
 };

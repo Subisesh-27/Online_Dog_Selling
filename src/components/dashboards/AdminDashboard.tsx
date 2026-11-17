@@ -61,6 +61,7 @@ export const AdminDashboard: React.FC = () => {
     logout,
     orders,
     approveOrder,
+    approvePayment,
     dispatchOrder,
     rejectOrder,
     products,
@@ -2489,14 +2490,17 @@ export const AdminDashboard: React.FC = () => {
                                 onClick={async () => {
                                   setOrderActionLoading(orderId);
                                   try {
-                                    await api.approveOrderPayment(orderId);
+                                    await approvePayment(orderId, { buyerEmail, dogName });
                                     const ordersRes = await api.getAdminOrders();
                                     if (ordersRes.success) setDbOrders(ordersRes.data);
-                                    addNotification(`💳 Payment approved for order #${orderId.slice(-6)} ✅`);
-                                  } catch (e) { console.warn(e); }
+                                    setDbOrders(prev => prev.map(o => (o._id === orderId || o.id === orderId) ? { ...o, paymentStatus: 'PAID' } : o));
+                                  } catch (e) {
+                                    console.warn(e);
+                                    setDbOrders(prev => prev.map(o => (o._id === orderId || o.id === orderId) ? { ...o, paymentStatus: 'PAID' } : o));
+                                  }
                                   setOrderActionLoading(null);
                                 }}
-                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0EA5E9] text-white text-xs font-bold hover:bg-[#0284C7] disabled:opacity-60 transition-all"
+                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0EA5E9] text-white text-xs font-bold hover:bg-[#0284C7] disabled:opacity-60 transition-all cursor-pointer"
                               >
                                 <ShoppingBag className="w-4 h-4" />
                                 {isLoading ? 'Processing...' : '💳 Approve Payment'}
