@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 import { Seller } from '../models/Seller.js';
@@ -10,25 +9,10 @@ import { Review } from '../models/Review.js';
 import { DogShow } from '../models/DogShow.js';
 import { ShowRegistration } from '../models/ShowRegistration.js';
 import { formatApiResponse } from '../utils/validators.js';
-import { sendSellerApprovalEmail, sendDogApprovalEmail, sendPaymentApprovalEmail } from '../services/emailService.js';
+import { sendSellerApprovalEmail, sendDogApprovalEmail } from '../services/emailService.js';
 import { createNotification } from '../services/notificationService.js';
-import { adminInfo } from '../config/adminInfo.js';
-
-// Helper to reliably find an order by MongoDB _id, trackingId, or order identifier
-const findOrderByIdOrTracking = async (orderIdParam: string | string[] | undefined) => {
-  const orderId = Array.isArray(orderIdParam) ? orderIdParam[0] : (orderIdParam || '');
-  if (!orderId) return null;
-  if (mongoose.Types.ObjectId.isValid(orderId)) {
-    const o = await Order.findById(orderId).populate('dogId').populate('customerId');
-    if (o) return o;
-  }
-  return await Order.findOne({
-    $or: [
-      { trackingId: orderId },
-      { trackingId: { $regex: orderId.replace(/^ORD-/, ''), $options: 'i' } },
-    ],
-  }).populate('dogId').populate('customerId');
-};
+import { sendPaymentApprovalEmail } from '../services/emailService.js';
+import adminInfo from '../config/adminInfo.js';
 
 export const getAllUsers = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
@@ -283,10 +267,10 @@ export const updateUserStatus = async (req: AuthRequest, res: Response): Promise
 export const approveDogOrder = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     const { orderId } = req.params;
-    const order = await findOrderByIdOrTracking(orderId);
+    const order = await Order.findById(orderId).populate('dogId').populate('customerId');
 
     if (!order) {
-      return res.status(200).json(formatApiResponse(true, 'Order approved successfully.', { id: orderId, orderStatus: 'APPROVED' }));
+      return res.status(404).json(formatApiResponse(false, 'Order not found'));
     }
 
     order.orderStatus = 'APPROVED';
@@ -323,10 +307,10 @@ export const approveDogOrder = async (req: AuthRequest, res: Response): Promise<
 export const dispatchDogOrder = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     const { orderId } = req.params;
-    const order = await findOrderByIdOrTracking(orderId);
+    const order = await Order.findById(orderId).populate('dogId').populate('customerId');
 
     if (!order) {
-      return res.status(200).json(formatApiResponse(true, 'Order marked as dispatched.', { id: orderId, orderStatus: 'OUT_FOR_DELIVERY' }));
+      return res.status(404).json(formatApiResponse(false, 'Order not found'));
     }
 
     order.orderStatus = 'OUT_FOR_DELIVERY';
@@ -358,10 +342,10 @@ export const rejectDogOrder = async (req: AuthRequest, res: Response): Promise<a
   try {
     const { orderId } = req.params;
     const { reason } = req.body;
-    const order = await findOrderByIdOrTracking(orderId);
+    const order = await Order.findById(orderId).populate('dogId').populate('customerId');
 
     if (!order) {
-      return res.status(200).json(formatApiResponse(true, 'Order rejected.', { id: orderId, orderStatus: 'CANCELLED' }));
+      return res.status(404).json(formatApiResponse(false, 'Order not found'));
     }
 
     order.orderStatus = 'CANCELLED';
@@ -396,24 +380,10 @@ export const rejectDogOrder = async (req: AuthRequest, res: Response): Promise<a
 export const approveOrderPayment = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
     const { orderId } = req.params;
-    const { buyerEmail, dogName } = req.body || {};
 
-    const order = await findOrderByIdOrTracking(orderId);
+    const order = await Order.findById(orderId).populate('dogId').populate('customerId');
     if (!order) {
-      // Gracefully handle client-side / demo fallback orders (e.g. ORD-870462)
-      const targetEmail = buyerEmail || req.user?.email || 'customer@pawverse.ai';
-      const targetDogName = dogName || 'Companion Dog';
-      if (targetEmail) {
-        await sendPaymentApprovalEmail(targetEmail, targetDogName, adminInfo);
-      }
-      return res.status(200).json(
-        formatApiResponse(true, 'Payment approved successfully. Order moved to Pending Approval.', {
-          _id: orderId,
-          id: orderId,
-          paymentStatus: 'PAID',
-          orderStatus: 'PENDING_APPROVAL',
-        })
-      );
+      return res.status(404).json(formatApiResponse(false, 'Order not found'));
     }
 
     // Update payment record to CAPTURED
@@ -434,33 +404,26 @@ export const approveOrderPayment = async (req: AuthRequest, res: Response): Prom
     await order.save();
 
     // Notify customer
-    const customerUserId = (order.customerId as any)?._id || order.customerId;
-    const resolvedDogName = (order.dogId as any)?.name || dogName || 'Companion Dog';
-
-    if (customerUserId) {
+    if (order.customerId) {
+      const customerUserId = (order.customerId as any)._id || order.customerId;
+      const dogName = (order.dogId as any)?.name || 'Dog';
       await createNotification(
         customerUserId.toString(),
         'Payment Approved by Admin ✅',
-        `Your payment for "${resolvedDogName}" has been manually approved by PawVerse Admin. Your order is now pending dispatch.`,
+        `Your payment for "${dogName}" has been manually approved by PawVerse Admin. Your order is now pending dispatch.`,
         'ORDER'
       );
-    }
 
-    const customerUser = customerUserId ? await User.findById(customerUserId) : null;
-    const targetEmail =
-      order.buyerEmail ||
-      (order.customerId as any)?.email ||
-      customerUser?.email ||
-      buyerEmail ||
-      req.user?.email;
-
-    if (targetEmail) {
-      await sendPaymentApprovalEmail(targetEmail, resolvedDogName, adminInfo);
+      // Send approval email with admin contact details
+      const customer = await User.findById(customerUserId);
+      const email = (order.customerId as any).email || (customer && customer.email);
+      if (email) {
+        await sendPaymentApprovalEmail(email, dogName, adminInfo);
+      }
     }
 
     return res.status(200).json(formatApiResponse(true, 'Payment approved successfully. Order moved to Pending Approval.', order));
   } catch (error: any) {
-    console.error('[ Approve Order Payment Error ]', error);
     return res.status(500).json(formatApiResponse(false, error.message));
   }
 };
@@ -471,9 +434,9 @@ export const cancelDogOrder = async (req: AuthRequest, res: Response): Promise<a
     const { orderId } = req.params;
     const { reason } = req.body;
 
-    const order = await findOrderByIdOrTracking(orderId);
+    const order = await Order.findById(orderId).populate('dogId').populate('customerId');
     if (!order) {
-      return res.status(200).json(formatApiResponse(true, 'Order cancelled successfully.', { id: orderId, orderStatus: 'CANCELLED' }));
+      return res.status(404).json(formatApiResponse(false, 'Order not found'));
     }
 
     order.orderStatus = 'CANCELLED';

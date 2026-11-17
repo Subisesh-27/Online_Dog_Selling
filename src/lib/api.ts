@@ -317,11 +317,10 @@ export const api = {
     return handleResponse(res);
   },
 
-  approveOrderPayment: async (orderId: string, details?: { buyerEmail?: string; dogName?: string }) => {
+  approveOrderPayment: async (orderId: string) => {
     const res = await fetch(`${API_BASE_URL}/admin/orders/${orderId}/approve-payment`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-      body: JSON.stringify(details || {}),
     });
     return handleResponse(res);
   },
@@ -470,6 +469,20 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
     });
+    return handleResponse(res);
+  },
+
+  matchBreederWithKNN: async (preferences: any) => {
+    const res = await fetch(`${API_BASE_URL}/ai/match-breeder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(preferences),
+    });
+    return handleResponse(res);
+  },
+
+  getBreederMLDataset: async () => {
+    const res = await fetch(`${API_BASE_URL}/ai/breeders-dataset`);
     return handleResponse(res);
   },
 
